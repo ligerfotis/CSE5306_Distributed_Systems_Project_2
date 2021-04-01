@@ -4,8 +4,33 @@ import os
 import queue
 import socket
 
+IP = "127.0.0.1"
+PORT = 1234
+
+
+def set_up_username(my_username, header_length):
+    client_socket = connect_client(IP, PORT)
+
+    send_msg(socket=client_socket, message=my_username, header_length=header_length)
+    username = False
+    while not username:
+        username = receive_file(client_socket, header_length=header_length)
+        if username and username["data"].decode() == "None":
+            print("username taken")
+            client_socket.close()
+            my_username = input("Choose another username: ")
+
+            client_socket = connect_client(IP, PORT)
+            send_msg(socket=client_socket, message=my_username, header_length=header_length)
+            username = False
+
+    username = username["data"].decode()
+    print("My username is {}".format(username))
+    return username, client_socket
+
 
 def send_msg(socket, message, header_length):
+    # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
     username = message.encode('utf-8')
     username_header = f"{len(username):<{header_length}}".encode('utf-8')
     socket.send(username_header + username)
@@ -80,4 +105,3 @@ def save_file(text, path, client_file):
 
     with open(path + client_file, "wt") as file:
         file.write(text)
-
