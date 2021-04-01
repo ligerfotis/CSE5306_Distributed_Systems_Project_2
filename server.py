@@ -5,10 +5,10 @@ import select
 import time
 
 from utils import send_msg, receive_file, check_username, save_file
-from utils_server import q_polling
+from utils_server import q_polling, update_lexicon, spelling_check
 
 HEADER_LENGTH = 10
-polling_timeout = 10
+polling_timeout = 30
 
 IP = "127.0.0.1"
 PORT = 1234
@@ -28,6 +28,8 @@ sockets_list = [server_socket]
 clients = {}
 
 print(f'Listening for connections on {IP}:{PORT}...')
+with open("lexicon.txt", "r") as file:
+    lexicon_list = file.readlines()[0].split(" ")
 
 start_time = time.time()
 while True:
@@ -47,6 +49,7 @@ while True:
     if not (read_sockets or exception_sockets):
         # print('timed out, do some other work here')
         q_dict = q_polling(clients, HEADER_LENGTH)
+        lexicon_list = update_lexicon(q_dict, lexicon_list)
         # q_dict = print_dict_queues(q_dict)
         start_time = time.time()
 
@@ -108,8 +111,12 @@ while True:
             # Get user by notified socket, so we will know who sent the message
             user = clients[notified_socket]
             print(f'Received message from {user["data"].decode("utf-8")}: {msg}')
-            print("sending {}".format(msg))
-            message = msg.encode('utf-8')
+
+            # annotate misspelled words
+            annotated_text = spelling_check(path + client_file, lexicon_list)
+
+            print("sending {}".format(annotated_text))
+            message = annotated_text.encode('utf-8')
             message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
             notified_socket.send(message_header + message)
 

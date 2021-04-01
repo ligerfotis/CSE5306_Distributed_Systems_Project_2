@@ -19,17 +19,17 @@ def receive_msg(client_socket, header_length):
     return message
 
 
-def spelling_check(file_to_checked, username, lexicon_file):
+def spelling_check(file_to_checked, lexicon):
     """
     Checks a file for spelling errors against lexicon.txt.
     ASSUMPTION: There is only one period at the end of each line.
-    :param username: username string
-    :param file_to_checked: file name to be spelling-checked
-    :return: a file with [] around the misspelled word
+    :param file_to_checked: file to be checked against the lexicon
+    :param lexicon: a list of words in the lexicon
+    :return: the annotated text string
     """
     # open the lexicon file
-    with open('server_files/{}'.format(lexicon_file)) as lex_file:
-        lex_array = lex_file.readline().split(" ")
+    # with open('server_files/{}'.format(lexicon_file)) as lex_file:
+    #     lex_array = lex_file.readline().split(" ")
 
     # open the file to be checked
     with open(file_to_checked) as file:
@@ -37,9 +37,9 @@ def spelling_check(file_to_checked, username, lexicon_file):
 
     array_checked_text = []
     # array of lower cased lexicon words
-    lower_lex_array = [word.lower() for word in lex_array]
+    lower_lex_array = [word.lower() for word in lexicon]
     # array of upper cased lexicon words
-    upper_lex_array = [word.upper() for word in lex_array]
+    upper_lex_array = [word.upper() for word in lexicon]
     # array of first letter upper cased and the rest lower cased lexicon words
     cap_lex_array = [word.capitalize() for word in lower_lex_array]
     for line in text:
@@ -58,12 +58,12 @@ def spelling_check(file_to_checked, username, lexicon_file):
     for line in array_checked_text:
         string_checked_text.append(" ".join(line) + '.\n')
 
-    # write the annotated text to a file
-    checked_file_name = "server_files/checked_text_{}.txt".format(username)
-    with open(checked_file_name, 'w') as chked_file:
-        chked_file.writelines(string_checked_text)
+    # # write the annotated text to a file
+    # checked_file_name = "server_files/checked_text_{}.txt".format(username)
+    # with open(checked_file_name, 'w') as chked_file:
+    #     chked_file.writelines(string_checked_text)
 
-    return checked_file_name
+    return "".join(string_checked_text)
 
 
 def q_polling(clients, header_length):
@@ -92,15 +92,16 @@ def print_dict_queues(q_dict):
     return q_dict
 
 
-def update_lexicon(word_queue, lexicon):
+def update_lexicon(word_queue_dict, lexicon):
     """
     Returns updated lexicon. Returned lexicon does not include duplicates
-    :param word_queue: a queue of words to be added in the lexicon
+    :param word_queue_dict: a dictionary of a queue of words for each user to be added in the lexicon
     :param lexicon: list of words in lexicon
     :return: updated lexicon
     """
-    while word_queue.qsize():
-        word = word_queue.get()
-        if word not in lexicon:
-            lexicon.append(word)
+    for word_queue in word_queue_dict.values():
+        while word_queue.qsize():
+            word = word_queue.get()
+            if word not in lexicon:
+                lexicon.append(word)
     return lexicon
