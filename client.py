@@ -5,7 +5,7 @@ import errno
 import sys
 import time
 
-from utils import send_msg, receive_file, connect_client
+from utils import send_msg, receive_file, connect_client, save_file
 
 HEADER_LENGTH = 10
 
@@ -47,11 +47,21 @@ while True:
     # input("press enter to send file:")
     # message = ""
     # If message is not empty - send it
-    if (time.time() - start_time) > 10:
+    if (time.time() - start_time) > 5:
         # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
         message = text_string.encode('utf-8')
         message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
         client_socket.send(message_header + message)
+
+        while 1:
+            msg = receive_file(client_socket, header_length=HEADER_LENGTH)
+            if msg:
+                break
+        msg = msg["data"].decode()
+        path = "client_files/"
+        filename = "annotated_txt_{}.txt".format(username)
+        save_file(msg, path, filename)
+
         start_time = time.time()
 
     # polling
@@ -71,20 +81,20 @@ while True:
             # Convert header to int value
             message_length = int(msg_header.decode('utf-8').strip())
 
-            # Receive and decode username
             message = client_socket.recv(message_length).decode('utf-8')
-            print(message)
-            while not q.empty():
-                message = q.get().encode('utf-8')
+            if message == "poll":
+                print(message)
+                while not q.empty():
+                    message = q.get().encode('utf-8')
+                    message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+                    client_socket.send(message_header + message)
+                message = "poll_end".encode('utf-8')
                 message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
                 client_socket.send(message_header + message)
-            message = "poll_end".encode('utf-8')
-            message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
-            client_socket.send(message_header + message)
 
-            q.put("hey")
-            q.put("hi")
-            q.put("hello")
+                q.put("hey")
+                q.put("hi")
+                q.put("hello")
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised

@@ -1,29 +1,24 @@
+import os
 import queue
 import socket
 import select
+import time
 
-from utils import send_msg, receive_file, check_username, receive_msg
+from utils import send_msg, receive_file, check_username, save_file
+from utils_server import q_polling
 
 HEADER_LENGTH = 10
+polling_timeout = 10
 
 IP = "127.0.0.1"
 PORT = 1234
 
 # Create a socket
-# socket.AF_INET - address family, IPv4, some otehr possible are AF_INET6, AF_BLUETOOTH, AF_UNIX
-# socket.SOCK_STREAM - TCP, conection-based, socket.SOCK_DGRAM - UDP, connectionless, datagrams, socket.SOCK_RAW - raw IP packets
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# SO_ - socket option
-# SOL_ - socket option level
-# Sets REUSEADDR (as a socket option) to 1 on socket
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-# Bind, so server informs operating system that it's going to use given IP and port For a server using 0.0.0.0 means
-# to listen on all available interfaces, useful to connect locally to 127.0.0.1 and remotely to LAN interface IP
 server_socket.bind((IP, PORT))
 
-# This makes server listen to new connections
+# Listen to new connections
 server_socket.listen()
 
 # List of sockets for select.select()
@@ -34,7 +29,7 @@ clients = {}
 
 print(f'Listening for connections on {IP}:{PORT}...')
 
-polls = {}
+start_time = time.time()
 while True:
 
     # Calls Unix select() system call or Windows select() WinSock call with three parameters:
@@ -46,29 +41,15 @@ while True:
     #   - writing - sockets ready for data to be send thru them
     #   - errors  - sockets with some exceptions
     # This is a blocking call, code execution will "wait" here and "get" notified in case any action should be taken
-    read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list, 2)
+    timeout = polling_timeout - (time.time() - start_time)
+    # print(timeout)
+    read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list, timeout)
     if not (read_sockets or exception_sockets):
-        print('timed out, do some other work here')
-        for client_socket in clients:
-            # poll each client
-            message = "poll".encode('utf-8')
-            message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
-            client_socket.send(message_header + message)
+        # print('timed out, do some other work here')
+        q_dict = q_polling(clients, HEADER_LENGTH)
+        # q_dict = print_dict_queues(q_dict)
+        start_time = time.time()
 
-            poll_list = []
-            q = queue.Queue()
-            while 1:
-                poll_msg = receive_msg(client_socket, HEADER_LENGTH)
-                if poll_msg == 'poll_end':
-                    polls[client_socket] = poll_list
-                    break
-                else:
-                    q.put(poll_msg)
-                    poll_list.append(poll_msg)
-        print(polls.values())
-
-
-    # print(clients)
     # Iterate over notified sockets
     for notified_socket in read_sockets:
 
@@ -90,15 +71,11 @@ while True:
             username = user['data'].decode()
 
             if check_username(username, clients):
-
                 # Add accepted socket to select.select() list
                 sockets_list.append(client_socket)
-
                 # Also save username and username header
                 clients[client_socket] = user
-
                 send_msg(socket=client_socket, message=username, header_length=HEADER_LENGTH)
-
                 print('Accepted new connection from {}:{}, username: {}'.format(*client_address,
                                                                                 user['data'].decode('utf-8')))
             else:
@@ -110,40 +87,35 @@ while True:
 
         # Else existing socket is sending a message
         else:
-
             # Receive message
             message = receive_file(notified_socket, header_length=HEADER_LENGTH)
 
             # If False, client disconnected, cleanup
             if message is False:
                 print('Closed connection from: {}'.format(clients[notified_socket]['data'].decode('utf-8')))
-
                 # Remove from list for socket.socket()
                 sockets_list.remove(notified_socket)
-
                 # Remove from our list of users
                 del clients[notified_socket]
-
                 continue
+
+            username = clients[notified_socket]["data"].decode()
+            path = "server_files/"
+            client_file = "file_{}.txt".format(username)
+            msg = message["data"].decode("utf-8")
+            save_file(msg, path, client_file)
 
             # Get user by notified socket, so we will know who sent the message
             user = clients[notified_socket]
-
-            print(f'Received message from {user["data"].decode("utf-8")}: {message["data"].decode("utf-8")}')
-
-            # # # Iterate over connected clients and broadcast message
-            # for client_socket in clients:
-            #
-            #     # But don't sent it to sender
-            #     if client_socket != notified_socket:
-            #         # Send user and message (both with their headers)
-            #         # We are reusing here message header sent by sender, and saved username header send by user when he connected
-            #         client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+            print(f'Received message from {user["data"].decode("utf-8")}: {msg}')
+            print("sending {}".format(msg))
+            message = msg.encode('utf-8')
+            message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+            notified_socket.send(message_header + message)
 
     # It's not really necessary to have this, but will handle some socket exceptions just in case
     for notified_socket in exception_sockets:
         # Remove from list for socket.socket()
         sockets_list.remove(notified_socket)
-
         # Remove from our list of users
         del clients[notified_socket]

@@ -1,5 +1,7 @@
 # Prepare username and header and send them We need to encode username to bytes, then count number of bytes and
 # prepare header of fixed size, that we encode to bytes as well
+import os
+import queue
 import socket
 
 
@@ -68,48 +70,14 @@ def connect_client(ip, port):
     return client_socket
 
 
-def spelling_check(file_to_checked, username, lexicon_file):
-    """
-    Checks a file for spelling errors against lexicon.txt.
-    ASSUMPTION: There is only one period at the end of each line.
-    :param username: username string
-    :param file_to_checked: file name to be spelling-checked
-    :return: a file with [] around the misspelled word
-    """
-    # open the lexicon file
-    with open('server_files/{}'.format(lexicon_file)) as lex_file:
-        lex_array = lex_file.readline().split(" ")
+def save_file(text, path, client_file):
+    # create dir to store received texts from clients
+    if not os.path.exists(path):
+        os.mkdir(path)
+    # check if file exists already and erase it if so
+    if os.path.exists(path + client_file):
+        os.remove(path + client_file)
 
-    # open the file to be checked
-    with open(file_to_checked) as file:
-        text = file.readlines()
+    with open(path + client_file, "wt") as file:
+        file.write(text)
 
-    array_checked_text = []
-    # array of lower cased lexicon words
-    lower_lex_array = [word.lower() for word in lex_array]
-    # array of upper cased lexicon words
-    upper_lex_array = [word.upper() for word in lex_array]
-    # array of first letter upper cased and the rest lower cased lexicon words
-    cap_lex_array = [word.capitalize() for word in lower_lex_array]
-    for line in text:
-        # convert string to array of words while removing periods, commas and next line special chars
-        line_array = line.strip("\n.,").split(" ")
-        # substitute a word in the word array if it is in the lower/upper/capitalized lexicon word array
-        corrected_array = ['[' + word_i + ']'
-                           if word_i in lower_lex_array or word_i in upper_lex_array or word_i in cap_lex_array
-                           else word_i
-                           for word_i in line_array]
-
-        array_checked_text.append(corrected_array)
-
-    # convert word arrays into strings and add period at the end
-    string_checked_text = []
-    for line in array_checked_text:
-        string_checked_text.append(" ".join(line) + '.\n')
-
-    # write the annotated text to a file
-    checked_file_name = "server_files/checked_text_{}.txt".format(username)
-    with open(checked_file_name, 'w') as chked_file:
-        chked_file.writelines(string_checked_text)
-
-    return checked_file_name
