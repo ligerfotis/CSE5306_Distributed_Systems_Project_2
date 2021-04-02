@@ -16,7 +16,12 @@ Code based on https://pysimplegui.readthedocs.io/en/latest/cookbook/
 
 class GUI:
     def __init__(self, name):
+        """
+        Init method
+        :param name: the name of the user (server or client)
+        """
         self.server, self.client = None, None
+        # helper variables
         if name == "Client":
             self.is_client = True
             self.is_server = False
@@ -39,13 +44,12 @@ class GUI:
         """
         Function for handling the GUI
         """
-
         while True:
             # read the events on the gui and their values
             event, values = self.window.read()
             # exit gui when window is closed or Exit button is pressed
             if event == sg.WIN_CLOSED or event == 'Exit':
-                # delete server's layout components
+                # close up sockets
                 if self.is_server:
                     try:
                         self.server.socket.shutdown(socket.SHUT_RD)
@@ -64,20 +68,26 @@ class GUI:
                     # try to log in with the given username
                     print("Trying to log in: {}".format(values[0]))
                     self.logged_in = self.client.set_up_connection(values[0])
+                    # not logged in
                     if not self.logged_in:
                         print("Could not login")
                         print("Username already taken.\nPlease use another one.")
                     else:
                         print('You are logged in!')
+                        # start the main thread of the client as a thread
                         thread = threading.Thread(target=self.client.main)
                         thread.start()
-
+                # if logged in
                 if self.logged_in:
+                    # "Send Text" is pressed
                     if event == "Send Text":
+                        # changes the clients variable, so that to turn on the file exchange with the server
                         self.client.send_file_to_server = True
+                        # pass on the filename given by the gui to the client thread
                         self.client.filename = values[1]
-
+                    # "Add" button is pressed
                     elif event == "Add":
+                        # add entry from gui to the client's thread queue
                         self.client.add_to_queue(values[2])
             # Server's gui
             elif self.is_server:

@@ -1,11 +1,11 @@
-# Prepare username and header and send them We need to encode username to bytes, then count number of bytes and
-# prepare header of fixed size, that we encode to bytes as well
+"""
+@author: Fotios Lygerakis
+@UTA ID: 1001774373
+"""
 import os
-import queue
 import socket
 
-IP = "127.0.0.1"
-PORT = 1234
+from config import IP, PORT
 
 
 def set_up_username(my_username, header_length):
@@ -32,19 +32,28 @@ def set_up_username(my_username, header_length):
 
 
 def send_msg(socket, message, header_length):
-    # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
+    """
+    Encode message to bytes, prepare header and convert to bytes, like for username above, then send
+    :param socket: socket to send through
+    :param message: message to send
+    :param header_length: header length
+    """
     msg = message.encode('utf-8')
     msg_header = f"{len(msg):<{header_length}}".encode('utf-8')
     socket.send(msg_header + msg)
 
 
-# Handles message receiving
 def receive_file(client_socket, header_length):
+    """
+    Handles message receiving
+    :param client_socket: socket to receive from
+    :param header_length: header length
+    :return: a dictionary with message header and message
+    """
     try:
         # Receive our "header" containing message length, it's size is defined and constant
         message_header = client_socket.recv(header_length)
         # If we received no data, client gracefully closed a connection, for example using socket.close() or
-        # socket.shutdown(socket.SHUT_RDWR)
         if not len(message_header):
             return False
 
@@ -64,6 +73,12 @@ def receive_file(client_socket, header_length):
 
 
 def receive_msg(client_socket, header_length):
+    """
+    handles message reception through a socket
+    :param client_socket:
+    :param header_length:
+    :return:
+    """
     # Receive our "header" containing username length, it's size is defined and constant
     msg_header = client_socket.recv(header_length)
 
@@ -76,6 +91,12 @@ def receive_msg(client_socket, header_length):
 
 
 def check_username(username, clients):
+    """
+    Checks if username is taken
+    :param username: username to be checked
+    :param clients: the online clients
+    :return: True if not used, False otherwise
+    """
     for socket in clients:
         if clients[socket]["data"].decode() == username:
             return False
@@ -83,6 +104,12 @@ def check_username(username, clients):
 
 
 def connect_client(ip, port):
+    """
+    Connects client through a socket
+    :param ip: ip address
+    :param port: port
+    :return: the socket established
+    """
     # Create a socket socket.AF_INET - address family, IPv4, some otehr possible are AF_INET6, AF_BLUETOOTH,
     # AF_UNIX socket.SOCK_STREAM - TCP, conection-based, socket.SOCK_DGRAM - UDP, connectionless, datagrams,
     # socket.SOCK_RAW - raw IP packets
@@ -97,6 +124,13 @@ def connect_client(ip, port):
 
 
 def save_file(text, path, client_file):
+    """
+    Saves the text to a file
+    :param text:
+    :param path:
+    :param client_file:
+    :return:
+    """
     # create dir to store received texts from clients
     if not os.path.exists(path):
         os.mkdir(path)

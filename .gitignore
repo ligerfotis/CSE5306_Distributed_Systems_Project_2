@@ -1,2 +1,4 @@
 # Project exclude paths
 /venv_lab/
+/client_files/annotated*
+/server_files/file_*

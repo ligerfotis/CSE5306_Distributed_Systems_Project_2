@@ -1,10 +1,15 @@
+"""
+@author: Fotios Lygerakis
+@UTA ID: 1001774373
+"""
 import os
 import queue
 import select
 
+from config import HEADER_LENGTH
 from utils.utils import send_msg, receive_file, save_file, set_up_username
 
-HEADER_LENGTH = 10
+
 
 """
 Code based on https://pythonprogramming.net/client-chatroom-sockets-tutorial-python-3/
@@ -28,6 +33,11 @@ class Client:
         self.q = queue.Queue()
 
     def set_up_connection(self, username):
+        """
+        Sets up connection and username
+        :param username: username for this client
+        :return: True if connection succeeded and username has been established, False otherwise
+        """
         try:
             # set up the connection and establish a username to the server
             response = set_up_username(username, HEADER_LENGTH)
@@ -41,6 +51,9 @@ class Client:
             return False
 
     def main(self):
+        """
+        Main functionality of the client
+        """
         while True:
             # check for polling demand
             read_sockets, _, exception_sockets = select.select([self.socket], [], [self.socket], 0.5)
@@ -81,8 +94,6 @@ class Client:
                         if message is False:
                             print("False")
                         message = message["data"].decode()
-                        # print(message)
-                        # print("received annotated text: \n{}".format(msg))
                         path = "client_files/"
                         filename = "annotated_{}_{}.txt".format(self.filename, self.username)
                         save_file(message, path, filename)
@@ -90,33 +101,24 @@ class Client:
                         self.send_file_to_server = False
 
     def send_file(self):
+        """
+        Read the text from the 'self.filename' file
+        :return: True if file exists, False otherwise
+        """
         if os.path.isfile("client_files/" + self.filename):
             with open("client_files/" + self.filename, "r") as file:
                 text_list = file.readlines()
                 self.text_string = ''.join(text_list)
             send_msg(self.socket, self.text_string, HEADER_LENGTH)
-            # print("text sent to server")
             return True
         else:
             print("\'{}\' does not exist.\nPlease provide a valid file name.".format(self.filename))
             return False
 
-    def exchange_file_with_server(self):
-        self.send_file()
-        msg = False
-        while True:
-            # Receive message
-            msg = receive_file(self.socket, header_length=HEADER_LENGTH)
-            if msg:
-                break
-
-        msg = msg["data"].decode()
-        # print("received annotated text: \n{}".format(msg))
-        path = "client_files/"
-        filename = "annotated_txt_{}.txt".format(self.username)
-        save_file(msg, path, filename)
-        print("finished exchanging")
-
     def add_to_queue(self, word):
+        """
+        Add a word into the clients queue
+        :param word: word to add in the queue
+        """
         self.q.put(word)
         print("word \'{}\' added in clients queue".format(word))

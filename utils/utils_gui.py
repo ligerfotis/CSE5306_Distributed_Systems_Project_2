@@ -1,6 +1,12 @@
+"""
+@author: Fotios Lygerakis
+@UTA ID: 1001774373
+"""
 import PySimpleGUI as sg
 
-
+"""
+The layout for server and client guis
+"""
 server_layout = [[sg.Output(size=(60, 20))],
                  [sg.Button('Go'), sg.Button('Client List'), sg.Button('Exit')]]
 

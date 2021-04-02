@@ -1,20 +1,19 @@
+"""
+@author: Fotios Lygerakis
+@UTA ID: 1001774373
+"""
 import queue
 import socket
 import select
 import time
 
+from config import IP, PORT, polling_timeout, HEADER_LENGTH
 from utils.utils import send_msg, receive_file, check_username, save_file
 from utils.utils_server import update_lexicon, spelling_check, receive_msg
 
 """
 Code based on https://pythonprogramming.net/server-chatroom-sockets-tutorial-python-3/
 """
-
-HEADER_LENGTH = 10
-polling_timeout = 60
-
-IP = "127.0.0.1"
-PORT = 1234
 
 
 class Server:
@@ -38,26 +37,32 @@ class Server:
         self.shutdown = False
 
     def main(self):
+        """
+        Main functionality of the server
+        """
         print("Listening for connections on {}:{}...".format(IP, PORT))
+        # load up the lexicon entries
         with open("server_files/lexicon.txt", "r") as file:
             self.lexicon_list = file.readlines()[0].split(" ")
 
         start_time = time.time()
         while True:
-
+            # times out every 'polling_timeout' minutes to poll from clients
+            # did this trick to take into consideration the time spent on exchanging files with clients
             timeout = polling_timeout - (time.time() - start_time)
             """
             Polling is based on https://pymotw.com/2/select/
             """
             read_sockets, _, exception_sockets = select.select(self.sockets_list, [], self.sockets_list, timeout)
+            # if timeout has happened
             if not (read_sockets or exception_sockets):
-                # print('timed out, do some other work here')
+                # polling
                 q_dict = self.q_polling()
-                # print("polling finished")
+                # update lexicon
                 self.lexicon_list = update_lexicon(q_dict, self.lexicon_list)
-                with open("server_files/lexicon_updated.txt", "w") as file:
+                # update lexicon file
+                with open("server_files/lexicon.txt", "w") as file:
                     file.write(" ".join(self.lexicon_list))
-                # q_dict = print_dict_queues(q_dict)
                 start_time = time.time()
 
             # Iterate over notified sockets
@@ -83,7 +88,7 @@ class Server:
                         continue
 
                     username = user['data'].decode()
-
+                    # username is not taken
                     if check_username(username, self.clients):
                         # Add accepted socket to select.select() list
                         self.sockets_list.append(client_socket)
@@ -92,7 +97,9 @@ class Server:
                         send_msg(socket=client_socket, message=username, header_length=HEADER_LENGTH)
                         print('Accepted new connection from {}:{}, username: {}'.format(*client_address,
                                                                                         user['data'].decode('utf-8')))
+                    # the username is taken
                     else:
+                        # notify the client of used username and close the socket
                         send_msg(socket=client_socket, message="None", header_length=HEADER_LENGTH)
                         print(
                             'Rejected new connection from {}:{}. username: {} is already in use by another client'.format(
@@ -115,10 +122,12 @@ class Server:
                         del self.clients[notified_socket]
                         continue
 
+                    # filter out the text from the message
                     username = self.clients[notified_socket]["data"].decode()
                     path = "server_files/"
                     client_file = "file_{}.txt".format(username)
                     msg = message["data"].decode("utf-8")
+                    # save the text to a file
                     save_file(msg, path, client_file)
 
                     # Get user by notified socket, so we will know who sent the message
@@ -145,6 +154,10 @@ class Server:
             del self.clients[notified_socket]
 
     def get_live_usernames(self):
+        """
+        Returns a list of live usernames
+        :return: list of live usernames
+        """
         username_list = []
         for client_socket in self.clients:
             username = self.clients[client_socket]["data"].decode()
@@ -152,20 +165,28 @@ class Server:
         return username_list
 
     def q_polling(self):
+        """
+        Put the words from the polling to a queue for each client
+        :return: a dictionary with a queue for each client
+        """
         polls = {}
         print("Polling from clients...")
         clients = self.clients.copy()
+        # iterate over clients
         for client_socket in clients:
             try:
                 # poll each client
                 send_msg(client_socket, "poll", HEADER_LENGTH)
                 q = queue.Queue()
                 while 1:
+                    # receive word from the client
                     poll_msg = receive_msg(client_socket, HEADER_LENGTH)
                     if poll_msg == 'poll_end':
+                        # the polling from this q has ended and store the queue in the dictionary
                         polls[client_socket] = q
                         break
                     else:
+                        # put the polling word in the queue
                         q.put(poll_msg)
             except select.error:
                 print(
@@ -176,5 +197,3 @@ class Server:
                 continue
         return polls
 
-# server = Server()
-# server.main()

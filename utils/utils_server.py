@@ -1,5 +1,14 @@
-
+"""
+@author: Fotios Lygerakis
+@UTA ID: 1001774373
+"""
 def receive_msg(client_socket, header_length):
+    """
+    Receives a message over a socket and translate it based on the header
+    :param client_socket: the socket to receive the message from
+    :param header_length: the length of the header
+    :return: the text in the message
+    """
     # Receive our "header" containing username length, it's size is defined and constant
     msg_header = client_socket.recv(header_length)
 
@@ -50,6 +59,11 @@ def spelling_check(file_to_checked, lexicon):
 
 
 def print_dict_queues(q_dict):
+    """
+    Prints the values of a dictionary of queues
+    :param q_dict: a dictionary of queues
+    :return: the dictionary of queues
+    """
     for q in q_dict.values():
         q_size = q.qsize()
         for _ in range(q_size):
