@@ -1,4 +1,3 @@
-import os
 import queue
 import socket
 import select
@@ -103,7 +102,7 @@ class Server:
 
                 # Else existing socket is sending a message
                 else:
-                    # Receive message
+                    # Receive username
                     message = receive_file(notified_socket, header_length=HEADER_LENGTH)
 
                     # If False, client disconnected, cleanup

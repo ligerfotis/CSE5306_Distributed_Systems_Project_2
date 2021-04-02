@@ -3,11 +3,10 @@
 @UTA ID: 1001774373
 """
 import socket
-import sys
 import threading
 import PySimpleGUI as sg
 from client import Client
-from utils_gui import server_layout, client_layout, delete_output
+from utils_gui import server_layout, client_layout
 from server import Server
 
 """
@@ -49,7 +48,6 @@ class GUI:
                 # delete server's layout components
                 if self.is_server:
                     try:
-                        # delete_output(is_server=self.is_server, layout_used=self.layout)
                         self.server.socket.shutdown(socket.SHUT_RD)
                         self.server.socket.close()
                     except:
@@ -62,27 +60,25 @@ class GUI:
             # Client's gui
             if self.is_client:
                 # on submit button take the username that has been entered
-                if event == 'Login':
+                if event == 'Login' and not self.logged_in:
                     # try to log in with the given username
                     print("Trying to log in: {}".format(values[0]))
                     self.logged_in = self.client.set_up_connection(values[0])
-                    if self.logged_in:
-                        print('You are logged in')
-                        thread = threading.Thread(target=self.client.main2)
-                        thread.start()
-                    else:
+                    if not self.logged_in:
                         print("Could not login")
+                        print("Username already taken.\nPlease use another one.")
+                    else:
+                        print('You are logged in!')
+                        thread = threading.Thread(target=self.client.main)
+                        thread.start()
 
-                elif event == "Send Text":
-                    self.client.send_file_to_server = True
-                    self.client.filename = values[1]
-                    # thread = threading.Thread(target=self.host.exchange_file_with_server)
-                    # thread.start()
-                    # thread = threading.Thread(target=self.host.exchange_file_with_server)
-                    # thread.start()
+                if self.logged_in:
+                    if event == "Send Text":
+                        self.client.send_file_to_server = True
+                        self.client.filename = values[1]
 
-                elif event == "Add":
-                    self.client.add_to_queue(values[2])
+                    elif event == "Add":
+                        self.client.add_to_queue(values[2])
             # Server's gui
             elif self.is_server:
                 # start a thread for the server when the Go button is pressed
@@ -98,6 +94,3 @@ class GUI:
                 else:
                     print(values)
         self.window.close()
-
-
-

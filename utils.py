@@ -9,24 +9,26 @@ PORT = 1234
 
 
 def set_up_username(my_username, header_length):
+    """
+    Sets up connection with the server and establishes a username on it.
+    If the username is taken, it returns None.
+    :param my_username: username to
+    :param header_length:
+    :return:
+    """
     client_socket = connect_client(IP, PORT)
 
     send_msg(socket=client_socket, message=my_username, header_length=header_length)
     username = False
     while not username:
         username = receive_file(client_socket, header_length=header_length)
-        if username and username["data"].decode() == "None":
-            print("username taken")
-            client_socket.close()
-            my_username = input("Choose another username: ")
-
-            client_socket = connect_client(IP, PORT)
-            send_msg(socket=client_socket, message=my_username, header_length=header_length)
-            username = False
-
-    username = username["data"].decode()
-    print("My username is {}".format(username))
-    return username, client_socket
+        if username:
+            if username["data"].decode() == "None":
+                return None
+            else:
+                username = username["data"].decode()
+                print("My username is {}".format(username))
+                return [username, client_socket]
 
 
 def send_msg(socket, message, header_length):

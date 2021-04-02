@@ -1,12 +1,3 @@
-# Prepare username and header and send them We need to encode username to bytes, then count number of bytes and
-# prepare header of fixed size, that we encode to bytes as well
-import os
-import queue
-import select
-import socket
-
-from utils import send_msg
-
 
 def receive_msg(client_socket, header_length):
     # Receive our "header" containing username length, it's size is defined and constant
@@ -28,10 +19,6 @@ def spelling_check(file_to_checked, lexicon):
     :param lexicon: a list of words in the lexicon
     :return: the annotated text string
     """
-    # open the lexicon file
-    # with open('server_files/{}'.format(lexicon_file)) as lex_file:
-    #     lex_array = lex_file.readline().split(" ")
-
     # open the file to be checked
     with open(file_to_checked) as file:
         text = file.readlines()
@@ -58,11 +45,6 @@ def spelling_check(file_to_checked, lexicon):
     string_checked_text = []
     for line in array_checked_text:
         string_checked_text.append(" ".join(line) + '.\n')
-
-    # # write the annotated text to a file
-    # checked_file_name = "server_files/checked_text_{}.txt".format(username)
-    # with open(checked_file_name, 'w') as chked_file:
-    #     chked_file.writelines(string_checked_text)
 
     return "".join(string_checked_text)
 
