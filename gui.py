@@ -6,7 +6,7 @@ import socket
 import threading
 import PySimpleGUI as sg
 from client import Client
-from utils_gui import server_layout, client_layout
+from utils.utils_gui import server_layout, client_layout
 from server import Server
 
 """

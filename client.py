@@ -1,7 +1,8 @@
+import os
 import queue
 import select
 
-from utils import send_msg, receive_file, save_file, set_up_username
+from utils.utils import send_msg, receive_file, save_file, set_up_username
 
 HEADER_LENGTH = 10
 
@@ -54,13 +55,20 @@ class Client:
                         print("False")
                     message = message["data"].decode()
                     if message == "poll":
-                        print(message)
+                        print("A poll is received from the server...")
                         while not self.q.empty():
-                            send_msg(self.socket, self.q.get(), HEADER_LENGTH)
+                            word = self.q.get()
+                            send_msg(self.socket, word, HEADER_LENGTH)
+                            print("The word \'{}\' was retrieved by the server.".format(word))
                         send_msg(self.socket, "poll_end", HEADER_LENGTH)
 
             if self.send_file_to_server:
-                self.send_file()
+                response = self.send_file()
+                # in case file requested does not exist
+                if not response:
+                    self.send_file_to_server = False
+                    continue
+                print("Successfully uploaded file to the server.")
                 read_sockets, _, exception_sockets = select.select([self.socket], [], [self.socket])
                 # Iterate over notified sockets
                 for notified_socket in read_sockets:
@@ -73,20 +81,25 @@ class Client:
                         if message is False:
                             print("False")
                         message = message["data"].decode()
-                        print(message)
+                        # print(message)
                         # print("received annotated text: \n{}".format(msg))
                         path = "client_files/"
-                        filename = "annotated_txt_{}.txt".format(self.username)
+                        filename = "annotated_{}_{}.txt".format(self.filename, self.username)
                         save_file(message, path, filename)
-                        print("finished exchanging")
+                        print("The spell check sequence has been completed.")
                         self.send_file_to_server = False
 
     def send_file(self):
-        with open(self.filename, "r") as file:
-            text_list = file.readlines()
-            self.text_string = ''.join(text_list)
-        send_msg(self.socket, self.text_string, HEADER_LENGTH)
-        print("text sent to server")
+        if os.path.isfile("client_files/" + self.filename):
+            with open("client_files/" + self.filename, "r") as file:
+                text_list = file.readlines()
+                self.text_string = ''.join(text_list)
+            send_msg(self.socket, self.text_string, HEADER_LENGTH)
+            # print("text sent to server")
+            return True
+        else:
+            print("\'{}\' does not exist.\nPlease provide a valid file name.".format(self.filename))
+            return False
 
     def exchange_file_with_server(self):
         self.send_file()

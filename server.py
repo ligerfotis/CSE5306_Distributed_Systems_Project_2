@@ -3,8 +3,8 @@ import socket
 import select
 import time
 
-from utils import send_msg, receive_file, check_username, save_file
-from utils_server import update_lexicon, spelling_check, receive_msg
+from utils.utils import send_msg, receive_file, check_username, save_file
+from utils.utils_server import update_lexicon, spelling_check, receive_msg
 
 """
 Code based on https://pythonprogramming.net/server-chatroom-sockets-tutorial-python-3/
@@ -39,7 +39,7 @@ class Server:
 
     def main(self):
         print("Listening for connections on {}:{}...".format(IP, PORT))
-        with open("lexicon.txt", "r") as file:
+        with open("server_files/lexicon.txt", "r") as file:
             self.lexicon_list = file.readlines()[0].split(" ")
 
         start_time = time.time()
@@ -51,11 +51,11 @@ class Server:
             """
             read_sockets, _, exception_sockets = select.select(self.sockets_list, [], self.sockets_list, timeout)
             if not (read_sockets or exception_sockets):
-                print('timed out, do some other work here')
+                # print('timed out, do some other work here')
                 q_dict = self.q_polling()
-                print("polling finished")
+                # print("polling finished")
                 self.lexicon_list = update_lexicon(q_dict, self.lexicon_list)
-                with open("lexicon_updated.txt", "w") as file:
+                with open("server_files/lexicon_updated.txt", "w") as file:
                     file.write(" ".join(self.lexicon_list))
                 # q_dict = print_dict_queues(q_dict)
                 start_time = time.time()
@@ -123,14 +123,14 @@ class Server:
 
                     # Get user by notified socket, so we will know who sent the message
                     user = self.clients[notified_socket]
-                    print(f'Received message from {user["data"].decode("utf-8")}: {msg}')
+                    print('Received text from user:{}'.format(username))
 
                     # annotate misspelled words
                     annotated_text = spelling_check(path + client_file, self.lexicon_list)
 
                     # print("sending {}".format(annotated_text))
                     send_msg(notified_socket, annotated_text, HEADER_LENGTH)
-                    print("finished exchange")
+                    print("Sent annotated text back to user:{}".format(username))
 
             if self.shutdown:
                 break
@@ -153,7 +153,7 @@ class Server:
 
     def q_polling(self):
         polls = {}
-        print("polling")
+        print("Polling from clients...")
         clients = self.clients.copy()
         for client_socket in clients:
             try:
