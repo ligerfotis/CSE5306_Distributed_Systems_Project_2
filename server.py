@@ -12,7 +12,7 @@ Code based on https://pythonprogramming.net/server-chatroom-sockets-tutorial-pyt
 """
 
 HEADER_LENGTH = 10
-polling_timeout = 5
+polling_timeout = 60
 
 IP = "127.0.0.1"
 PORT = 1234
@@ -36,6 +36,7 @@ class Server:
         self.clients = {}
 
         self.lexicon_list = []
+        self.shutdown = False
 
     def main(self):
         print("Listening for connections on {}:{}...".format(IP, PORT))
@@ -55,6 +56,8 @@ class Server:
                 q_dict = self.q_polling()
                 print("polling finished")
                 self.lexicon_list = update_lexicon(q_dict, self.lexicon_list)
+                with open("lexicon_updated.txt", "w") as file:
+                    file.write(" ".join(self.lexicon_list))
                 # q_dict = print_dict_queues(q_dict)
                 start_time = time.time()
 
@@ -67,8 +70,12 @@ class Server:
                     # Accept new connection
                     # That gives us new socket - client socket, connected to this given client only, it's unique for that client
                     # The other returned object is ip/port set
-                    client_socket, client_address = self.socket.accept()
-
+                    try:
+                        client_socket, client_address = self.socket.accept()
+                    except:
+                        print("server shut down")
+                        self.shutdown = True
+                        break
                     # Client should send his name right away, receive it
                     user = receive_file(client_socket, header_length=HEADER_LENGTH)
 
@@ -117,7 +124,7 @@ class Server:
 
                     # Get user by notified socket, so we will know who sent the message
                     user = self.clients[notified_socket]
-                    # print(f'Received message from {user["data"].decode("utf-8")}: {msg}')
+                    print(f'Received message from {user["data"].decode("utf-8")}: {msg}')
 
                     # annotate misspelled words
                     annotated_text = spelling_check(path + client_file, self.lexicon_list)
@@ -126,6 +133,8 @@ class Server:
                     send_msg(notified_socket, annotated_text, HEADER_LENGTH)
                     print("finished exchange")
 
+            if self.shutdown:
+                break
             self.handle_socket_exceptions(exception_sockets)
 
     def handle_socket_exceptions(self, exception_sockets):

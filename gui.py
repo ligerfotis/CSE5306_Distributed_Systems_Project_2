@@ -3,6 +3,7 @@
 @UTA ID: 1001774373
 """
 import socket
+import sys
 import threading
 import PySimpleGUI as sg
 from client import Client
@@ -47,8 +48,13 @@ class GUI:
             if event == sg.WIN_CLOSED or event == 'Exit':
                 # delete server's layout components
                 if self.is_server:
-                    delete_output(is_server=self.is_server, layout_used=self.layout)
-                    self.server.socket.shutdown(socket.SHUT_RD)
+                    try:
+                        # delete_output(is_server=self.is_server, layout_used=self.layout)
+                        self.server.socket.shutdown(socket.SHUT_RD)
+                        self.server.socket.close()
+                    except:
+                        print("server shut down")
+                        break
                 else:
                     self.client.socket.shutdown(socket.SHUT_RD)
                 break
@@ -91,5 +97,6 @@ class GUI:
                 else:
                     print(values)
         self.window.close()
+
 
 
