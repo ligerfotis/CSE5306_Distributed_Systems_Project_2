@@ -21,10 +21,8 @@ class Client:
         self.sockets_list = None
 
         # self.username, self.socket = set_up_username(my_username, HEADER_LENGTH)
-
-        with open("mytext.txt", "r") as file:
-            text_list = file.readlines()
-            self.text_string = ''.join(text_list)
+        self.filename = None
+        self.text_string = None
 
         self.q = queue.Queue()
         # self.q.put("hey")
@@ -133,6 +131,9 @@ class Client:
                         self.send_file_to_server = False
 
     def send_file(self):
+        with open(self.filename, "r") as file:
+            text_list = file.readlines()
+            self.text_string = ''.join(text_list)
         send_msg(self.socket, self.text_string, HEADER_LENGTH)
         print("text sent to server")
 

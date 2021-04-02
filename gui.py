@@ -75,13 +75,14 @@ class GUI:
 
                 elif event == "Send Text":
                     self.client.send_file_to_server = True
+                    self.client.filename = values[1]
                     # thread = threading.Thread(target=self.host.exchange_file_with_server)
                     # thread.start()
                     # thread = threading.Thread(target=self.host.exchange_file_with_server)
                     # thread.start()
 
                 elif event == "Add":
-                    self.client.add_to_queue(values[1])
+                    self.client.add_to_queue(values[2])
             # Server's gui
             elif self.is_server:
                 # start a thread for the server when the Go button is pressed
