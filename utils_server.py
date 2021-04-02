@@ -2,6 +2,7 @@
 # prepare header of fixed size, that we encode to bytes as well
 import os
 import queue
+import select
 import socket
 
 from utils import send_msg
@@ -66,22 +67,6 @@ def spelling_check(file_to_checked, lexicon):
     return "".join(string_checked_text)
 
 
-def q_polling(clients, header_length):
-    polls = {}
-    for client_socket in clients:
-        # poll each client
-        send_msg(client_socket, "poll", header_length)
-        q = queue.Queue()
-        while 1:
-            poll_msg = receive_msg(client_socket, header_length)
-            if poll_msg == 'poll_end':
-                polls[client_socket] = q
-                break
-            else:
-                q.put(poll_msg)
-    return polls
-
-
 def print_dict_queues(q_dict):
     for q in q_dict.values():
         q_size = q.qsize()
@@ -103,5 +88,6 @@ def update_lexicon(word_queue_dict, lexicon):
         while word_queue.qsize():
             word = word_queue.get()
             if word not in lexicon:
+                print("word \'{}\' added in the lexicon".format(word))
                 lexicon.append(word)
     return lexicon

@@ -31,18 +31,16 @@ def set_up_username(my_username, header_length):
 
 def send_msg(socket, message, header_length):
     # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
-    username = message.encode('utf-8')
-    username_header = f"{len(username):<{header_length}}".encode('utf-8')
-    socket.send(username_header + username)
+    msg = message.encode('utf-8')
+    msg_header = f"{len(msg):<{header_length}}".encode('utf-8')
+    socket.send(msg_header + msg)
 
 
 # Handles message receiving
 def receive_file(client_socket, header_length):
     try:
-
         # Receive our "header" containing message length, it's size is defined and constant
         message_header = client_socket.recv(header_length)
-
         # If we received no data, client gracefully closed a connection, for example using socket.close() or
         # socket.shutdown(socket.SHUT_RDWR)
         if not len(message_header):
@@ -50,6 +48,7 @@ def receive_file(client_socket, header_length):
 
         # Convert header to int value
         message_length = int(message_header.decode('utf-8').strip())
+        print("msg length: {}".format(message_length))
 
         # Return an object of message header and message data
         return {'header': message_header, 'data': client_socket.recv(message_length)}
